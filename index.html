@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clean Architecture in Spring Boot</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #0e0f13;
+  --surface:  #17191f;
+  --surface2: #1f222b;
+  --border:   rgba(255,255,255,0.08);
+  --border2:  rgba(255,255,255,0.14);
+  --text:     #e8eaf0;
+  --muted:    #8b90a0;
+  --hint:     #555b6e;
+
+  --blue:     #5b9cf6;
+  --blue-bg:  rgba(91,156,246,0.12);
+  --blue-t:   #93bbf9;
+  --green:    #5ecb8a;
+  --green-bg: rgba(94,203,138,0.12);
+  --green-t:  #8ddba9;
+  --amber:    #f0a843;
+  --amber-bg: rgba(240,168,67,0.12);
+  --amber-t:  #f5c07a;
+  --red:      #f06060;
+  --red-bg:   rgba(240,96,96,0.12);
+  --red-t:    #f59090;
+  --teal:     #3dbfa8;
+  --teal-bg:  rgba(61,191,168,0.12);
+  --teal-t:   #7dd4c4;
+  --purple:   #9b7ef8;
+  --purple-bg:rgba(155,126,248,0.12);
+  --purple-t: #bca8fb;
+
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'IBM Plex Sans', system-ui, sans-serif;
+}
+
+html, body {
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.shell {
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+  padding: clamp(12px, 4vw, 32px);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Topbar ── */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+.sec-nav { display: flex; gap: 5px; flex-wrap: wrap; flex: 1; }
+.sec-btn {
+  font-family: var(--sans);
+  font-size: 11px;
+  padding: 4px 10px;
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--muted);
+  transition: all .15s;
+  white-space: nowrap;
+}
+.sec-btn:hover, .sec-btn.on {
+  background: var(--surface2);
+  color: var(--text);
+  border-color: var(--border2);
+}
+.slide-ctr { font-size: 11px; color: var(--hint); white-space: nowrap; }
+
+/* ── Progress ── */
+.progress { height: 2px; background: var(--surface2); border-radius: 2px; overflow: hidden; margin-bottom: 14px; }
+.prog-bar { height: 100%; background: var(--blue); border-radius: 2px; transition: width .3s; }
+
+/* ── Slide ── */
+.slide { display: none; flex: 1; }
+.slide.on { display: flex; flex-direction: column; }
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: clamp(18px, 4vw, 32px) clamp(20px, 5vw, 36px);
+  flex: 1;
+}
+
+/* ── Tags ── */
+.stag {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 20px;
+  display: inline-block;
+  margin-bottom: 12px;
+  letter-spacing: .3px;
+}
+.stag-p { background: var(--amber-bg); color: var(--amber-t); }
+.stag-s { background: var(--green-bg); color: var(--green-t); }
+.stag-c { background: var(--blue-bg);  color: var(--blue-t); }
+.stag-i { background: var(--purple-bg);color: var(--purple-t); }
+.stag-x { background: var(--red-bg);   color: var(--red-t); }
+.stag-b { background: var(--teal-bg);  color: var(--teal-t); }
+.stag-z { background: var(--surface2); color: var(--muted); }
+
+/* ── Typography ── */
+h1.st { font-size: clamp(18px, 4vw, 24px); font-weight: 500; color: var(--text); margin-bottom: 16px; line-height: 1.3; }
+h2.sh { font-size: clamp(12px, 2vw, 14px); font-weight: 500; color: var(--muted); margin-bottom: 10px; }
+h3.sc { font-size: clamp(12px, 1.8vw, 13px); font-weight: 500; margin-bottom: 8px; }
+
+/* ── Bullets ── */
+ul.bl { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+ul.bl li {
+  font-size: clamp(12px, 2vw, 14px);
+  line-height: 1.65;
+  color: var(--text);
+  display: flex; gap: 10px; align-items: flex-start;
+}
+ul.bl li::before {
+  content: "";
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--border2);
+  flex-shrink: 0;
+  margin-top: 8px;
+}
+ul.bl li b { font-weight: 500; }
+ul.gcol-ul { list-style: none; }
+ul.gcol-ul li { font-size: clamp(11px, 1.7vw, 12px); line-height: 1.65; color: var(--muted); }
+
+/* ── Code ── */
+.code {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  font-family: var(--mono);
+  font-size: clamp(10px, 1.7vw, 12px);
+  line-height: 1.75;
+  overflow-x: auto;
+  margin-bottom: 14px;
+  white-space: pre;
+  tab-size: 2;
+}
+.ha { background: var(--amber-bg); color: var(--amber-t); border-radius: 2px; padding: 0 3px; }
+.hg { background: var(--green-bg); color: var(--green-t); border-radius: 2px; padding: 0 3px; }
+.hr { background: var(--red-bg);   color: var(--red-t);   border-radius: 2px; padding: 0 3px; }
+.hb { background: var(--blue-bg);  color: var(--blue-t);  border-radius: 2px; padding: 0 3px; }
+
+/* ── Notes / Callouts ── */
+.note {
+  border-radius: var(--r-md);
+  padding: 11px 14px;
+  margin-bottom: 14px;
+  font-size: clamp(11px, 1.8vw, 13px);
+  line-height: 1.65;
+}
+.note b { font-weight: 500; }
+.note.w { background: var(--amber-bg); color: var(--amber-t); border-left: 3px solid var(--amber); }
+.note.g { background: var(--green-bg); color: var(--green-t); border-left: 3px solid var(--green); }
+.note.i { background: var(--blue-bg);  color: var(--blue-t);  border-left: 3px solid var(--blue); }
+.note.d { background: var(--red-bg);   color: var(--red-t);   border-left: 3px solid var(--red); }
+
+/* ── Grids ── */
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 14px; }
+.grid4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.gcol {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+}
+
+/* ── Section header ── */
+.sec-hdr {
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.sec-num {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 500;
+  flex-shrink: 0;
+}
+.sec-info h2 { font-size: clamp(14px, 2.5vw, 17px); font-weight: 500; margin-bottom: 2px; }
+.sec-info p  { font-size: clamp(11px, 1.7vw, 12px); }
+
+/* ── Table ── */
+.tbl-wrap { overflow-x: auto; margin-bottom: 14px; }
+table.dt { width: 100%; border-collapse: collapse; font-size: clamp(10px, 1.7vw, 12px); min-width: 360px; }
+table.dt th {
+  background: var(--surface2);
+  font-weight: 500;
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border2);
+  color: var(--text);
+}
+table.dt td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: top;
+}
+table.dt tr:last-child td { border-bottom: none; }
+
+/* ── Badge ── */
+.badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
+.b-bl { background: var(--blue-bg);   color: var(--blue-t); }
+.b-gr { background: var(--green-bg);  color: var(--green-t); }
+.b-am { background: var(--amber-bg);  color: var(--amber-t); }
+.b-rd { background: var(--red-bg);    color: var(--red-t); }
+
+/* ── Quiz ── */
+.quiz-box {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+.quiz-box p { font-size: clamp(12px, 1.9vw, 14px); font-weight: 500; margin-bottom: 10px; color: var(--text); }
+.opts { display: flex; flex-direction: column; gap: 6px; }
+.opt {
+  font-family: var(--sans);
+  font-size: clamp(11px, 1.8vw, 13px);
+  padding: 8px 12px;
+  border: 1px solid var(--border2);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  transition: background .15s;
+}
+.opt:hover { background: var(--surface2); }
+.opt.ok { background: var(--green-bg); color: var(--green-t); border-color: rgba(94,203,138,.3); }
+.opt.no { background: var(--red-bg);   color: var(--red-t);   border-color: rgba(240,96,96,.3); }
+.fb {
+  font-size: clamp(11px, 1.6vw, 12px);
+  margin-top: 8px;
+  padding: 7px 11px;
+  border-radius: var(--r-sm);
+  display: none;
+}
+.fb.show { display: block; }
+.fb.ok { background: var(--green-bg); color: var(--green-t); }
+.fb.no { background: var(--red-bg);   color: var(--red-t); }
+
+/* ── Fill-in-blank ── */
+.fill-box {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+.fill-box > p { font-size: clamp(11px, 1.7vw, 13px); margin-bottom: 10px; color: var(--muted); }
+.fill-row { display: flex; flex-direction: column; gap: 8px; font-size: clamp(11px, 1.8vw, 13px); color: var(--text); }
+.fill-row > div { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
+.fill-row select {
+  font-family: var(--sans);
+  font-size: clamp(11px, 1.7vw, 13px);
+  padding: 4px 8px;
+  border: 1px solid var(--border2);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+.chk-btn {
+  font-family: var(--sans);
+  font-size: clamp(11px, 1.6vw, 12px);
+  padding: 6px 14px;
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text);
+  margin-top: 10px;
+  transition: background .15s;
+}
+.chk-btn:hover { background: var(--surface2); }
+
+/* ── Analogy ── */
+.analogy-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 16px 18px;
+  margin-bottom: 14px;
+}
+.a-icon {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+.a-txt { font-size: clamp(12px, 1.8vw, 13px); line-height: 1.65; color: var(--text); }
+.a-txt b { font-weight: 500; }
+
+/* ── Arch flow ── */
+.arch-wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
+.arch-b {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: var(--r-sm);
+  padding: 8px 12px;
+  font-size: clamp(10px, 1.6vw, 12px);
+  font-weight: 500;
+  color: var(--text);
+}
+.arch-asp {
+  background: var(--blue-bg);
+  border: 1px solid rgba(91,156,246,.25);
+  border-radius: var(--r-sm);
+  padding: 8px 12px;
+  font-size: clamp(10px, 1.6vw, 12px);
+  font-weight: 500;
+  color: var(--blue-t);
+  width: 100%;
+  text-align: center;
+  margin: 4px 0;
+}
+.arch-err {
+  background: var(--red-bg);
+  border: 1px solid rgba(240,96,96,.25);
+  border-radius: var(--r-sm);
+  padding: 8px 12px;
+  font-size: clamp(10px, 1.6vw, 12px);
+  font-weight: 500;
+  color: var(--red-t);
+  width: 100%;
+  text-align: center;
+}
+.arch-arrow { font-size: 14px; color: var(--hint); }
+
+/* ── Nav buttons ── */
+.navrow {
+  display: flex;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  margin-top: 14px;
+}
+.nbtn {
+  font-family: var(--sans);
+  font-size: clamp(11px, 1.8vw, 13px);
+  padding: 7px 18px;
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text);
+  transition: background .15s;
+}
+.nbtn:hover { background: var(--surface2); }
+.nbtn.pri { background: var(--surface2); border-color: var(--border2); }
+
+/* ── Code highlight blanks ── */
+.blank { background: var(--amber-bg); color: var(--amber-t); padding: 0 4px; border-radius: 2px; }
+
+/* ── Checkbox labels ── */
+.chk-label {
+  font-size: clamp(11px, 1.8vw, 13px);
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  cursor: pointer;
+  color: var(--text);
+  line-height: 1.5;
+}
+.chk-label input { cursor: pointer; margin-top: 3px; flex-shrink: 0; accent-color: var(--blue); }
+
+/* ── Intro title ── */
+.title-hero { font-size: clamp(22px, 5vw, 32px); font-weight: 500; color: var(--text); margin-bottom: 6px; line-height: 1.2; }
+.title-sub  { font-size: clamp(13px, 2vw, 16px); color: var(--muted); margin-bottom: 22px; }
+.hero-img-wrap {
+  margin-bottom: 16px;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+}
+.hero-img {
+  display: block;
+  width: 100%;
+  max-height: 240px;
+  object-fit: cover;
+}
+.image-full .card {
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 0;
+  height: calc(100vh - 92px);
+  min-height: 420px;
+}
+.image-full .full-img {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  object-fit: cover;
+  display: block;
+}
+
+/* ── Responsive tweaks ── */
+@media (max-width: 560px) {
+  .grid2 { grid-template-columns: 1fr; }
+  .grid4 { grid-template-columns: repeat(2, 1fr); }
+  .arch-wrap { flex-direction: column; align-items: stretch; }
+  .arch-arrow { display: none; }
+}
+@media (max-width: 380px) {
+  .grid4 { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="sec-nav" id="secNav">
+    <button class="sec-btn on" onclick="goto(0)">Intro</button>
+    <button class="sec-btn" onclick="goto(2)">AOP</button>
+    <button class="sec-btn" onclick="goto(12)">Validation</button>
+    <button class="sec-btn" onclick="goto(19)">@Valid vs @Validated</button>
+    <button class="sec-btn" onclick="goto(24)">Exceptions</button>
+    <button class="sec-btn" onclick="goto(30)">Summary</button>
+  </div>
+  <span class="slide-ctr" id="ctr">1 / 31</span>
+</div>
+<div class="progress"><div class="prog-bar" id="pb" style="width:3%"></div></div>
+
+<!-- ══════════════════ SLIDES ══════════════════ -->
+
+<!-- Cover -->
+<div class="slide on image-full" id="s-1"><div class="card">
+  <img class="full-img" src="./cover.png" alt="AOP cover image">
+</div></div>
+
+<!-- 0: Title -->
+<div class="slide" id="s0"><div class="card">
+  <span class="stag stag-c">Spring Boot</span>
+  <p class="title-hero">Clean Architecture<br>in Spring Boot</p>
+  <p class="title-sub">AOP &middot; Validation &middot; @Valid vs @Validated &middot; Exception Handling</p>
+  <div class="grid4">
+    <div class="gcol" style="border-left:3px solid var(--blue)">
+      <h3 class="sc" style="color:var(--blue-t)">Section 1 — AOP (W13 > spring3 > README30)</h3>
+      <ul class="gcol-ul"><li>Cross-cutting concerns</li><li>@Aspect, @Around</li><li>Logging example</li></ul>
+    </div>
+    <div class="gcol" style="border-left:3px solid var(--green)">
+      <h3 class="sc" style="color:var(--green-t)">Section 2 — Validation (W13 > spring3 > README31)</h3>
+      <ul class="gcol-ul"><li>Validate at boundary</li><li>@Valid, @NotBlank, @Email</li><li>DTO pattern</li></ul>
+    </div>
+    <div class="gcol" style="border-left:3px solid var(--amber)">
+      <h3 class="sc" style="color:var(--amber-t)">Section 3 — @Valid vs @Validated (W13 > spring3 > README32)</h3>
+      <ul class="gcol-ul"><li>RequestBody vs PathVariable</li><li>Exception types</li></ul>
+    </div>
+    <div class="gcol" style="border-left:3px solid var(--red)">
+      <h3 class="sc" style="color:var(--red-t)">Section 4 — Global Errors (W13 > spring3 > README32)</h3>
+      <ul class="gcol-ul"><li>@RestControllerAdvice</li><li>Clean JSON errors</li></ul>
+    </div>
+  </div>
+  <div class="note i">Each section follows: Problem → Question → Code Review → Solution → Practice.</div>
+</div></div>
+
+<!-- 1: Objectives -->
+<div class="slide" id="s1"><div class="card">
+  <span class="stag stag-c">Objectives</span>
+  <h1 class="st">What you will understand by the end</h1>
+  <ul class="bl">
+    <li><b>Why</b> cross-cutting concerns need a special approach</li>
+    <li><b>How</b> AOP intercepts method calls without touching business logic</li>
+    <li><b>Where</b> to validate user input and which annotation to use</li>
+    <li><b>How</b> to return clean, consistent error responses to API clients</li>
+    <li><b>When</b> to use @Valid vs @Validated — they are not the same</li>
+  </ul>
+  <div class="note i">Each concept follows the same pattern: feel the pain first, then learn the solution.</div>
+</div></div>
+
+<!-- 2: AOP Problem -->
+<div class="slide" id="s2"><div class="card">
+  <div class="sec-hdr" style="background:var(--blue-bg)">
+    <div class="sec-num" style="background:var(--blue);color:#0e0f13">1</div>
+    <div class="sec-info">
+      <h2 style="color:var(--blue-t)">Aspect-Oriented Programming</h2>
+      <p style="color:var(--blue)">Separating cross-cutting concerns from business logic</p>
+    </div>
+  </div>
+  <span class="stag stag-p">Problem</span>
+  <h1 class="st">Where does logging belong?</h1>
+  <div class="grid2">
+    <div>
+      <div class="note w">You need to log every service method — duration, arguments, errors. UserService has 8 methods, ProductService 12, OrderService 6.</div>
+      <ul class="bl">
+        <li>26 methods total across three services</li>
+        <li>Same logging code copy-pasted into each one</li>
+        <li>Change the format? Edit 26 places.</li>
+      </ul>
+    </div>
+    <div>
+<div class="code"><span class="hr">// UserService.java</span>
+public User findById(Long id) {
+  <span class="hr">log.info("Calling findById");</span>
+  <span class="hr">long s = System.currentTimeMillis();</span>
+  User u = repo.findById(id)...;
+  <span class="hr">long d = System.currentTimeMillis()-s;</span>
+  <span class="hr">log.info("Done in "+d+"ms");</span>
+  return u;
+}</div>
+      <div class="note d">Repeated in every method of every service. Fragile, inconsistent, painful.</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 3: AOP Question -->
+<div class="slide" id="s3"><div class="card">
+  <span class="stag stag-i">Question</span>
+  <h1 class="st">What goes wrong with this @Around advice?</h1>
+<div class="code">@Around("execution(* com.example.service.*.*(..))")
+public Object log(ProceedingJoinPoint pjp) throws Throwable {
+  System.out.println("Before: " + pjp.getSignature().getName());
+  pjp.proceed();
+  System.out.println("After");
+  return null;
+}</div>
+  <div class="quiz-box" id="q-aop1">
+    <p>A service method returns a Product object. What does the caller receive?</p>
+    <div class="opts">
+      <button class="opt" onclick="ans(this,'aop1',false)">A. The correct Product — pjp.proceed() already captured the return value</button>
+      <button class="opt" onclick="ans(this,'aop1',false)">B. A NullPointerException — proceed() cannot be called without arguments</button>
+      <button class="opt" onclick="ans(this,'aop1',true)">C. null — pjp.proceed() return value is discarded; the advice always returns null</button>
+      <button class="opt" onclick="ans(this,'aop1',false)">D. A compile error — @Around methods must return void</button>
+    </div>
+    <div class="fb" id="fb-aop1"></div>
+  </div>
+  <div class="note i">@Around controls the return value. If you do not <b>return pjp.proceed()</b>, the real result is silently thrown away and null is returned instead.</div>
+</div></div>
+
+<!-- 4: Cross-cutting concept -->
+<div class="slide" id="s4"><div class="card">
+  <span class="stag stag-c">Concept</span>
+  <h1 class="st">What is a cross-cutting concern?</h1>
+  <ul class="bl">
+    <li>Logic that <b>does not belong to one layer</b> — it runs across all of them</li>
+    <li><b>Logging</b> — record what ran, how long it took, what failed</li>
+    <li><b>Security</b> — check authentication before any method runs</li>
+    <li><b>Transactions</b> — wrap database operations automatically</li>
+    <li><b>Exception handling</b> — intercept errors from any layer</li>
+  </ul>
+  <div class="analogy-row">
+    <div class="a-icon" style="background:var(--amber-bg)">&#9889;</div>
+    <div class="a-txt"><b>The Electricity Analogy</b><br>Your business logic = cooking, cleaning, painting. Cross-cutting logic = electricity. You do not rewire electricity in every room. You plug in and it works everywhere. AOP is the electrical system of your application.</div>
+  </div>
+</div></div>
+
+<!-- 5: Vocabulary -->
+<div class="slide" id="s5"><div class="card">
+  <span class="stag stag-c">Vocabulary</span>
+  <h1 class="st">AOP core terms — four to know</h1>
+  <div class="tbl-wrap"><table class="dt">
+    <thead><tr><th>Term</th><th>What it is</th><th>Analogy</th></tr></thead>
+    <tbody>
+      <tr><td><b>Aspect</b></td><td>The class that holds the cross-cutting logic</td><td>The electrical panel</td></tr>
+      <tr><td><b>Advice</b></td><td>The method that actually runs (the logic)</td><td>The circuit for a room</td></tr>
+      <tr><td><b>Pointcut</b></td><td>An expression selecting which methods to intercept</td><td>Which sockets are connected</td></tr>
+      <tr><td><b>Join point</b></td><td>A specific moment where Advice can be inserted</td><td>The moment you plug in</td></tr>
+    </tbody>
+  </table></div>
+  <div class="tbl-wrap"><table class="dt">
+    <thead><tr><th>Advice type</th><th>When it runs</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge b-bl">@Before</span></td><td>Before the target method executes</td></tr>
+      <tr><td><span class="badge b-am">@After</span></td><td>After the method — always, even if exception is thrown</td></tr>
+      <tr><td><span class="badge b-gr">@Around</span></td><td>Wraps the method — most powerful, controls full execution</td></tr>
+      <tr><td><span class="badge b-rd">@AfterThrowing</span></td><td>Only when the method throws an exception</td></tr>
+    </tbody>
+  </table></div>
+</div></div>
+
+<!-- 6: AOP-Concept image -->
+<div class="slide image-full" id="s6"><div class="card">
+  <img class="full-img" src="./aop-concept.png" alt="AOP image slide">
+</div></div>
+
+<!-- 7: @Around solution -->
+<div class="slide" id="s7"><div class="card">
+  <span class="stag stag-s">Solution</span>
+  <h1 class="st">@Around — logging all service methods at once</h1>
+<div class="code"><span class="hb">@Aspect</span>
+<span class="hb">@Component</span>
+public class LoggingAspect {
+
+  <span class="hg">@Around("execution(* com.example.service.*.*(..))")</span>
+  public Object log(<span class="ha">ProceedingJoinPoint pjp</span>) throws Throwable {
+    String method = <span class="ha">pjp.getSignature().getName()</span>;
+    System.out.println("Calling: " + method);
+    long start = System.currentTimeMillis();
+
+    Object result = <span class="ha">pjp.proceed()</span>; <span class="hg">// run the real method</span>
+
+    long ms = System.currentTimeMillis() - start;
+    System.out.println("Done: " + method + " (" + ms + "ms)");
+    return result;
+  }
+}</div>
+  <div class="grid2">
+    <div class="note g">Write once. Every service method is now logged. Zero changes to service classes.</div>
+    <div class="note i"><b>Pointcut:</b> execution(* com.example.service.*.*(..)) = any method, any class in service package, any parameters.</div>
+  </div>
+</div></div>
+
+<!-- 8: Pointcut image -->
+<div class="slide image-full" id="s8"><div class="card">
+  <img class="full-img" src="./pointcut.png" alt="AOP image slide">
+</div></div>
+
+<!-- 9: Pointcut syntax -->
+<div class="slide" id="s9"><div class="card">
+  <span class="stag stag-c">Pointcut Syntax</span>
+  <h1 class="st">Reading pointcut expressions</h1>
+  <div class="tbl-wrap"><table class="dt">
+    <thead><tr><th style="min-width:260px">Expression</th><th>Matches</th></tr></thead>
+    <tbody>
+      <tr><td><code>execution(* com.example.service.*.*(..))</code></td><td>All methods in all service classes</td></tr>
+      <tr><td><code>execution(* com.example.service.UserService.*(..))</code></td><td>All methods in UserService only</td></tr>
+      <tr><td><code>execution(* com.example.service.UserService.find*(..))</code></td><td>Methods starting with find</td></tr>
+      <tr><td><code>execution(public * *(..))</code></td><td>All public methods anywhere</td></tr>
+      <tr><td><code>execution(* com.example..*.*(..))</code></td><td>All methods in com.example and any subpackage</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note i">The <b>..</b> in params means "any parameters". In a package path it means "this package and all subpackages".</div>
+</div></div>
+
+<!-- 10: Spring built-in AOP -->
+<div class="slide" id="s10"><div class="card">
+  <span class="stag stag-c">Spring Built-in AOP</span>
+  <h1 class="st">Spring already uses AOP — you just add annotations</h1>
+  <div class="tbl-wrap"><table class="dt">
+    <thead><tr><th>Annotation</th><th>What Spring does behind the scenes</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge b-bl">@Transactional</span></td><td>Wraps method in a DB transaction. Commits on success, rolls back on RuntimeException.</td></tr>
+      <tr><td><span class="badge b-gr">@Cacheable</span></td><td>First call: runs method, stores result. Repeat calls: returns from cache, skips method entirely.</td></tr>
+      <tr><td><span class="badge b-am">@Async</span></td><td>Runs method in a background thread — user does not wait.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="grid2">
+<div class="code" style="font-size:clamp(9px,1.5vw,11px)"><span class="hr">// Without @Transactional</span>
+tx.begin();
+repo.debit(from, amount);
+repo.credit(to, amount);
+tx.commit(); <span class="hr">// or rollback on error</span></div>
+<div class="code" style="font-size:clamp(9px,1.5vw,11px)"><span class="hg">// With @Transactional</span>
+<span class="hb">@Transactional</span>
+public void transfer(...) {
+  repo.debit(from, amount);
+  repo.credit(to, amount);
+}</div>
+  </div>
+</div></div>
+
+<!-- 11: AOP Practice -->
+<div class="slide" id="s11"><div class="card">
+  <span class="stag stag-x">Practice — Fix the code</span>
+  <h1 class="st">This Aspect has exactly 4 real bugs. Which options are correct?</h1>
+<div class="code"><span class="hr">// Spot the bugs — one option below is a red herring</span>
+@Component
+public class LoggingAspect {
+
+  @Around("execution(* UserService.*(..))")
+  public void logMethod(JoinPoint jp) {
+    System.out.println("Called: " + jp.getSignature());
+    jp.proceed();
+    System.out.println("Done");
+  }
+}</div>
+  <div class="fill-box">
+    <p>Select exactly the 4 real bugs (one option is a false alarm — watch out):</p>
+    <div id="fix1-checks" style="display:flex;flex-direction:column;gap:8px">
+      <label class="chk-label"><input type="checkbox" value="1"> Missing <b>@Aspect</b> on the class — Spring won't treat it as an aspect</label>
+      <label class="chk-label"><input type="checkbox" value="2"> Return type must be <b>Object</b>, not void — @Around must be able to return the intercepted value</label>
+      <label class="chk-label"><input type="checkbox" value="3"> Parameter must be <b>ProceedingJoinPoint</b>, not JoinPoint — only PJP has a proceed() method</label>
+      <label class="chk-label"><input type="checkbox" value="4"> <b>jp.proceed()</b> result is discarded — must be captured and returned</label>
+      <label class="chk-label"><input type="checkbox" value="5"> <b>@Component</b> should be removed — @Aspect already registers the bean (RED HERRING)</label>
+    </div>
+    <button class="chk-btn" onclick="chkFix1()">Check answers</button>
+    <div class="fb" id="fb-fix1"></div>
+  </div>
+</div></div>
+
+<!-- 10: Validation Problem -->
+<div class="slide" id="s12"><div class="card">
+  <div class="sec-hdr" style="background:var(--green-bg)">
+    <div class="sec-num" style="background:var(--green);color:#0e0f13">2</div>
+    <div class="sec-info">
+      <h2 style="color:var(--green-t)">Validation in Spring Boot</h2>
+      <p style="color:var(--green)">Reject bad data before it reaches your business logic</p>
+    </div>
+  </div>
+  <span class="stag stag-p">Problem</span>
+  <h1 class="st">What happens without validation?</h1>
+  <div class="grid2">
+    <div>
+      <div class="note w">A client sends this JSON to your API:</div>
+<div class="code">{"title": "",
+ "author": "   ",
+ "year": -500,
+ "email": "not-an-email"}</div>
+    </div>
+    <div>
+      <ul class="bl">
+        <li>Empty strings saved to the database</li>
+        <li>Impossible year (-500) stored as valid data</li>
+        <li>Invalid email passes through silently</li>
+        <li>Downstream services crash with confusing errors</li>
+        <li>Hard to trace where the bad data came from</li>
+      </ul>
+    </div>
+  </div>
+</div></div>
+
+<!-- 11: Security guard analogy -->
+<div class="slide" id="s13"><div class="card">
+  <span class="stag stag-c">Concept</span>
+  <h1 class="st">The controller is your security checkpoint</h1>
+  <div class="analogy-row">
+    <div class="a-icon" style="background:var(--blue-bg)">&#128737;</div>
+    <div class="a-txt"><b>Security Guard Analogy</b><br>A bouncer checks your ID at the door — before you get in. The controller is your bouncer. Check credentials (data) at the boundary. Do not let bad data into the VIP area (service + database).</div>
+  </div>
+  <ul class="bl">
+    <li><b>Controller</b> = entry point of the system — validate here</li>
+    <li><b>Service</b> = business logic — should receive only valid data</li>
+    <li><b>Repository</b> = data access — should never see garbage</li>
+  </ul>
+  <div class="note g">Validate at the boundary. Reject early. Keep the rest of the system clean.</div>
+</div></div>
+
+<!-- 12: Dependency + annotation table -->
+<div class="slide" id="s14"><div class="card">
+  <span class="stag stag-s">Setup</span>
+  <h1 class="st">Add one dependency to enable validation</h1>
+<div class="code"><span class="hb">&lt;dependency&gt;</span>
+  &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+  &lt;artifactId&gt;<span class="hg">spring-boot-starter-validation</span>&lt;/artifactId&gt;
+<span class="hb">&lt;/dependency&gt;</span></div>
+  <div class="note i">This brings in Hibernate Validator — the default implementation of the Jakarta Bean Validation spec.</div>
+  <div class="tbl-wrap"><table class="dt">
+    <thead><tr><th>Annotation</th><th>Applies to</th><th>What it checks</th></tr></thead>
+    <tbody>
+      <tr><td><b>@NotBlank</b></td><td>String</td><td>Not null, not empty, not only whitespace</td></tr>
+      <tr><td><b>@NotNull</b></td><td>Any type</td><td>Must not be null</td></tr>
+      <tr><td><b>@Email</b></td><td>String</td><td>Must look like a valid email address</td></tr>
+      <tr><td><b>@Min(n)</b></td><td>Number</td><td>Must be greater than or equal to n</td></tr>
+      <tr><td><b>@Size(min,max)</b></td><td>String, Collection</td><td>Length or size within range</td></tr>
+      <tr><td><b>@Pattern(regexp)</b></td><td>String</td><td>Must match the regex pattern</td></tr>
+    </tbody>
+  </table></div>
+</div></div>
+
+<!-- 13: DTO annotations -->
+<div class="slide" id="s15"><div class="card">
+  <span class="stag stag-s">Solution</span>
+  <h1 class="st">Annotate your DTO or entity fields</h1>
+<div class="code">@Entity
+public class Book {
+  @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
+
+  <span class="hg">@NotBlank(message = "Title is required")</span>
+  private String title;
+
+  <span class="hg">@NotBlank(message = "Author is required")</span>
+  private String author;
+
+  <span class="hg">@Min(value = 1000, message = "Year must be realistic")</span>
+  private int year;
+
+  <span class="hg">@Email(message = "Must be a valid email")</span>
+  <span class="hg">@NotBlank(message = "Email is required")</span>
+  private String email;
+}</div>
+  <div class="note g">The message attribute is what the client sees in the error response — make it helpful.</div>
+</div></div>
+
+<!-- 14: @Valid -->
+<div class="slide" id="s16"><div class="card">
+  <span class="stag stag-s">Solution</span>
+  <h1 class="st">Trigger validation with @Valid in the controller</h1>
+<div class="code">@RestController
+@RequestMapping("/books")
+public class BookController {
+
+  @PostMapping
+  public Book addBook(<span class="hg">@Valid</span> <span class="hb">@RequestBody</span> Book book) {
+    return service.saveBook(book);
+  }
+}</div>
+  <div class="grid2">
+    <div class="note g"><b>With @Valid:</b> Spring checks all annotations on Book before the method runs. Bad data gets a 400 Bad Request automatically.</div>
+    <div class="note d"><b>Without @Valid:</b> No validation happens. Bad data reaches the service. You get a confusing 500 Internal Server Error.</div>
+  </div>
+  <div class="note w">The annotation on the field tells Spring <b>what</b> to check. @Valid tells Spring <b>to check it</b>. You need both.</div>
+</div></div>
+
+<!-- 15: Real world -->
+<div class="slide" id="s17"><div class="card">
+  <span class="stag stag-c">Real-world Usage</span>
+  <h1 class="st">Where validation saves you in production</h1>
+  <div class="grid4">
+    <div class="gcol" style="border-top:3px solid var(--green)">
+      <h3 class="sc" style="color:var(--green-t)">User registration</h3>
+      <ul class="gcol-ul"><li>@Email — real email</li><li>@Size(min=8) — password</li><li>@NotBlank — username</li><li>@Pattern — phone format</li></ul>
+    </div>
+    <div class="gcol" style="border-top:3px solid var(--blue)">
+      <h3 class="sc" style="color:var(--blue-t)">Product catalog</h3>
+      <ul class="gcol-ul"><li>@NotBlank — product name</li><li>@Positive — price &gt; 0</li><li>@Min(1) — stock &gt;= 1</li><li>@Size(max=500) — description</li></ul>
+    </div>
+    <div class="gcol" style="border-top:3px solid var(--amber)">
+      <h3 class="sc" style="color:var(--amber-t)">Order API</h3>
+      <ul class="gcol-ul"><li>@NotNull — customer ID</li><li>@Future — delivery date</li><li>@Min(1) — quantity</li></ul>
+    </div>
+    <div class="gcol" style="border-top:3px solid var(--teal)">
+      <h3 class="sc" style="color:var(--teal-t)">Event booking</h3>
+      <ul class="gcol-ul"><li>@Past — birth date</li><li>@Digits — card format</li><li>@Valid — nested object</li></ul>
+    </div>
+  </div>
+</div></div>
+
+<!-- 16: Validation practice -->
+<div class="slide" id="s18"><div class="card">
+  <span class="stag stag-x">Practice — Add annotations</span>
+  <h1 class="st">Choose the most precise annotation for each field</h1>
+<div class="code">public class ContactDTO {
+  <span class="hr">// name: required, spaces-only input must be rejected</span>
+  private String name;
+
+  <span class="hr">// email: required + structurally valid email</span>
+  private String email;
+
+  <span class="hr">// age: integer, must be 18–120 inclusive</span>
+  private int age;
+
+  <span class="hr">// phone: optional, must match ^\+\d{10,15}$</span>
+  private String phone;
+}</div>
+  <div class="fill-box">
+    <p>Select the most precise correct annotation(s) for each field:</p>
+    <div class="fill-row">
+      <div>name &rarr; <select id="val-name"><option value="">choose</option><option value="ok">@NotBlank</option><option value="w">@NotNull</option><option value="w">@NotEmpty</option><option value="w">@Size(min=1)</option></select></div>
+      <div>email &rarr; <select id="val-email"><option value="">choose</option><option value="ok">@NotBlank + @Email</option><option value="w">@Email only</option><option value="w">@NotNull + @Email</option><option value="w">@NotEmpty + @Email</option></select></div>
+      <div>age &rarr; <select id="val-age"><option value="">choose</option><option value="ok">@Min(18) + @Max(120)</option><option value="w">@Size(min=18, max=120)</option><option value="w">@Range(min=18, max=120)</option><option value="w">@Positive + @Max(120)</option></select></div>
+      <div>phone &rarr; <select id="val-phone"><option value="">choose</option><option value="ok">@Pattern(regexp="^\\+\\d{10,15}$") only</option><option value="w">@NotBlank + @Pattern</option><option value="w">@Size(min=10, max=15)</option><option value="w">@Email</option></select></div>
+    </div>
+    <button class="chk-btn" onclick="chkVal()">Check</button>
+    <div class="fb" id="val-fb"></div>
+  </div>
+</div></div>
+
+<!-- 17: @Valid vs @Validated problem -->
+<div class="slide" id="s19"><div class="card">
+  <div class="sec-hdr" style="background:var(--amber-bg)">
+    <div class="sec-num" style="background:var(--amber);color:#0e0f13">3</div>
+    <div class="sec-info">
+      <h2 style="color:var(--amber-t)">@Valid vs @Validated</h2>
+      <p style="color:var(--amber)">Choosing the right annotation for the right situation</p>
+    </div>
+  </div>
+  <span class="stag stag-p">Problem</span>
+  <h1 class="st">What if the bad data is in the URL, not the body?</h1>
+<div class="code"><span class="hr">// Someone calls: GET /contacts/-99</span>
+@GetMapping("/{id}")
+public Contact getById(@PathVariable Long id) {
+  return service.getById(id); <span class="hr">// -99 reaches the service!</span>
+}</div>
+  <div class="note d">@Valid only validates @RequestBody objects. Path variables and query params need a different approach.</div>
+</div></div>
+
+<!-- 18: Difference table -->
+<div class="slide" id="s20"><div class="card">
+  <span class="stag stag-c">Concept</span>
+  <h1 class="st">@Valid vs @Validated — when to use which</h1>
+  <div class="tbl-wrap"><table class="dt">
+    <thead><tr><th>Situation</th><th>Use</th><th>Exception thrown</th></tr></thead>
+    <tbody>
+      <tr><td>JSON body (@RequestBody)</td><td><span class="badge b-bl">@Valid</span></td><td>MethodArgumentNotValidException</td></tr>
+      <tr><td>URL segment (@PathVariable)</td><td><span class="badge b-am">@Validated</span> on class</td><td>ConstraintViolationException</td></tr>
+      <tr><td>Query param (@RequestParam)</td><td><span class="badge b-am">@Validated</span> on class</td><td>ConstraintViolationException</td></tr>
+    </tbody>
+  </table></div>
+  <div class="grid2">
+<div class="code" style="font-size:clamp(9px,1.5vw,11px)"><span class="hg">// @RequestBody → use @Valid</span>
+@PostMapping
+public Contact create(
+  <span class="hb">@Valid</span> @RequestBody Contact c) {
+  return service.create(c);
+}</div>
+<div class="code" style="font-size:clamp(9px,1.5vw,11px)"><span class="hg">// PathVariable → @Validated on class</span>
+<span class="hb">@Validated</span>
+@RestController
+public class ContactController {
+  @GetMapping("/{id}")
+  public Contact get(
+    <span class="hb">@PathVariable @Min(1)</span> Long id) {...}
+}</div>
+  </div>
+</div></div>
+
+<!-- 19: Question -->
+<div class="slide" id="s21"><div class="card">
+  <span class="stag stag-i">Question</span>
+  <h1 class="st">Both validations look correct — but what exception does each throw?</h1>
+<div class="code"><span class="hg">@Validated</span>
+@RestController
+@RequestMapping("/users")
+public class UserController {
+
+  <span class="hg">// Path A: empty body with @Valid</span>
+  @PostMapping
+  public User create(<span class="hb">@Valid</span> @RequestBody User user) {
+    return service.create(user);
+  }
+
+  <span class="hg">// Path B: negative id with @Min(1)</span>
+  @GetMapping("/{id}")
+  public User getById(<span class="hb">@PathVariable @Min(1)</span> Long id) {
+    return service.getById(id);
+  }
+}</div>
+  <div class="quiz-box" id="q-validated">
+    <p>A student writes one @ExceptionHandler(MethodArgumentNotValidException.class) and expects it to catch both failures. What actually happens?</p>
+    <div class="opts">
+      <button class="opt" onclick="ans(this,'validated',false)">A. It works — both @Valid and @Validated throw MethodArgumentNotValidException</button>
+      <button class="opt" onclick="ans(this,'validated',false)">B. It catches Path B but not Path A — path variables throw a different exception</button>
+      <button class="opt" onclick="ans(this,'validated',true)">C. It catches Path A but not Path B — @PathVariable with @Validated throws ConstraintViolationException, not MethodArgumentNotValidException</button>
+      <button class="opt" onclick="ans(this,'validated',false)">D. Neither is caught — @RestControllerAdvice must be on the same class as the controller</button>
+    </div>
+    <div class="fb" id="fb-validated"></div>
+  </div>
+</div></div>
+
+<!-- 20: Fixed controller -->
+<div class="slide" id="s22"><div class="card">
+  <span class="stag stag-s">Fixed</span>
+  <h1 class="st">Add @Validated to the class — method params now work</h1>
+<div class="code"><span class="hg">@Validated</span>  <span class="ha">// enables method-level constraint validation</span>
+@RestController
+@RequestMapping("/users")
+public class UserController {
+
+  @GetMapping("/{id}")
+  public User getById(<span class="hb">@PathVariable @Min(1)</span> Long id) {
+    return service.getById(id);
+    <span class="hg">// Now: GET /users/-5 → 400 Bad Request</span>
+  }
+
+  @PostMapping
+  public User create(<span class="hb">@Valid</span> @RequestBody User user) {
+    return service.create(user);
+  }
+}</div>
+  <div class="note g">@Validated on the class activates Spring's proxy-based validation for all method parameters in that controller.</div>
+</div></div>
+
+<!-- 21: Best practices -->
+<div class="slide" id="s23"><div class="card">
+  <span class="stag stag-b">Best Practices</span>
+  <h1 class="st">@Valid vs @Validated — rules to remember</h1>
+  <div class="grid2">
+    <div class="gcol" style="border-top:3px solid var(--green)">
+      <h3 class="sc" style="color:var(--green-t)">Do</h3>
+      <ul class="gcol-ul" style="display:flex;flex-direction:column;gap:6px">
+        <li>Use @Valid on every @RequestBody parameter</li>
+        <li>Use @Validated on the class for PathVariable / RequestParam validation</li>
+        <li>Always add a custom message to each constraint</li>
+        <li>Use a DTO (not the entity) for incoming request data</li>
+      </ul>
+    </div>
+    <div class="gcol" style="border-top:3px solid var(--red)">
+      <h3 class="sc" style="color:var(--red-t)">Don't</h3>
+      <ul class="gcol-ul" style="display:flex;flex-direction:column;gap:6px">
+        <li>Forget @Valid — you get 500 instead of 400</li>
+        <li>Skip validation on PUT and PATCH, only POST</li>
+        <li>Validate only in the service — controller is the boundary</li>
+        <li>Return raw Spring stack traces to clients</li>
+      </ul>
+    </div>
+  </div>
+</div></div>
+
+<!-- 22: Exception problem -->
+<div class="slide" id="s24"><div class="card">
+  <div class="sec-hdr" style="background:var(--red-bg)">
+    <div class="sec-num" style="background:var(--red);color:#0e0f13">4</div>
+    <div class="sec-info">
+      <h2 style="color:var(--red-t)">Global Exception Handling</h2>
+      <p style="color:var(--red)">Return clean, consistent error responses to API clients</p>
+    </div>
+  </div>
+  <span class="stag stag-p">Problem</span>
+  <h1 class="st">What does the client see without error handling?</h1>
+<div class="code" style="font-size:clamp(9px,1.5vw,11px)">{
+  "timestamp": "2025-01-01T10:00:00.000+00:00",
+  <span class="hr">"status": 400,</span>
+  "error": "Bad Request",
+  <span class="hr">"message": "",</span>         &lt;-- useless
+  "path": "/books",
+  <span class="hr">"trace": "org.springframework.web.bind...</span>
+  <span class="hr">  MethodArgumentNotValidException at...</span>
+  <span class="hr">  (300 more lines of stack trace)"</span>
+}</div>
+  <div class="note d">Stack traces expose internals. Empty messages tell clients nothing. Every endpoint returns a different format.</div>
+</div></div>
+
+<!-- 23: Analogy -->
+<div class="slide" id="s25"><div class="card">
+  <span class="stag stag-c">Analogy</span>
+  <h1 class="st">Be the helpful customer service desk</h1>
+  <div class="analogy-row">
+    <div class="a-icon" style="background:var(--teal-bg)">&#128101;</div>
+    <div class="a-txt"><b>Customer service desk analogy</b><br>When something goes wrong at a hotel, you go to the front desk. They give you a clear, polite, structured answer — not a stack of internal maintenance logs. Your @RestControllerAdvice is the front desk of your API.</div>
+  </div>
+  <div class="grid2">
+    <div class="gcol" style="border-top:3px solid var(--red)">
+      <h3 class="sc" style="color:var(--red-t)">Bad response</h3>
+      <ul class="gcol-ul" style="display:flex;flex-direction:column;gap:4px">
+        <li>Raw exception class name</li>
+        <li>Stack trace with 200 lines</li>
+        <li>Different format per endpoint</li>
+        <li>No actionable message</li>
+      </ul>
+    </div>
+    <div class="gcol" style="border-top:3px solid var(--green)">
+      <h3 class="sc" style="color:var(--green-t)">Good response</h3>
+      <ul class="gcol-ul" style="display:flex;flex-direction:column;gap:4px">
+        <li>Status: 400</li>
+        <li>"email": "Must be a valid email"</li>
+        <li>"name": "Name cannot be blank"</li>
+        <li>Same format everywhere</li>
+      </ul>
+    </div>
+  </div>
+</div></div>
+
+<!-- 24: @RestControllerAdvice -->
+<div class="slide" id="s26"><div class="card">
+  <span class="stag stag-s">Solution</span>
+  <h1 class="st">@RestControllerAdvice — one class handles all errors</h1>
+<div class="code"><span class="hb">@RestControllerAdvice</span>
+public class GlobalExceptionHandler {
+
+  <span class="hg">@ResponseStatus(HttpStatus.BAD_REQUEST)</span>
+  <span class="hg">@ExceptionHandler(MethodArgumentNotValidException.class)</span>
+  public Map&lt;String, String&gt; handleValidation(
+      MethodArgumentNotValidException ex) {
+
+    Map&lt;String, String&gt; errors = new HashMap&lt;&gt;();
+    ex.getBindingResult().getFieldErrors().forEach(err -&gt;
+      errors.put(<span class="ha">err.getField()</span>, <span class="ha">err.getDefaultMessage()</span>)
+    );
+    return errors;
+  }
+}</div>
+  <div class="note g"><b>Result:</b> {"email": "Must be a valid email", "name": "Name cannot be blank"}</div>
+</div></div>
+
+<!-- 25: Both handlers -->
+<div class="slide" id="s27"><div class="card">
+  <span class="stag stag-s">Solution</span>
+  <h1 class="st">Handle both exception types in the same class</h1>
+<div class="code"><span class="hg">// handles @Valid on @RequestBody</span>
+@ExceptionHandler(<span class="hb">MethodArgumentNotValidException.class</span>)
+@ResponseStatus(HttpStatus.BAD_REQUEST)
+public Map&lt;String, String&gt; handleBody(
+    MethodArgumentNotValidException ex) {
+  Map&lt;String, String&gt; errors = new HashMap&lt;&gt;();
+  ex.getBindingResult().getFieldErrors().forEach(err -&gt;
+    errors.put(err.getField(), err.getDefaultMessage())
+  );
+  return errors;
+}
+
+<span class="hg">// handles @Validated on @PathVariable / @RequestParam</span>
+@ExceptionHandler(<span class="hb">ConstraintViolationException.class</span>)
+@ResponseStatus(HttpStatus.BAD_REQUEST)
+public Map&lt;String, String&gt; handleParams(
+    ConstraintViolationException ex) {
+  Map&lt;String, String&gt; errors = new HashMap&lt;&gt;();
+  ex.getConstraintViolations().forEach(v -&gt;
+    errors.put(v.getPropertyPath().toString(), v.getMessage())
+  );
+  return errors;
+}</div>
+</div></div>
+
+<!-- 26: Fill in the blank -->
+<div class="slide" id="s28"><div class="card">
+  <span class="stag stag-x">Practice — Fill in the blanks</span>
+  <h1 class="st">Complete the exception handler — all three blanks matter</h1>
+<div class="code">@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+  @ResponseStatus(<span class="blank">___</span>)
+  @ExceptionHandler(<span class="blank">___</span>.class)
+  public Map&lt;String, String&gt; handleValidation(
+      <span class="blank">___</span> ex) {
+    Map&lt;String, String&gt; errors = new HashMap&lt;&gt;();
+    ex.getBindingResult().getFieldErrors().forEach(err -&gt;
+      errors.put(err.getField(), err.getDefaultMessage())
+    );
+    return errors;
+  }
+}</div>
+  <div class="fill-box">
+    <p>Fill in the three blanks — watch for plausible wrong options:</p>
+    <div class="fill-row">
+      <div>Blank 1 (HTTP status): <select id="ex-b1"><option value="">choose</option><option value="ok">HttpStatus.BAD_REQUEST (400)</option><option value="w">HttpStatus.UNPROCESSABLE_ENTITY (422)</option><option value="w">HttpStatus.INTERNAL_SERVER_ERROR (500)</option><option value="w">HttpStatus.NOT_FOUND (404)</option></select></div>
+      <div>Blank 2 (exception caught): <select id="ex-b2"><option value="">choose</option><option value="ok">MethodArgumentNotValidException</option><option value="w">ConstraintViolationException</option><option value="w">BindException</option><option value="w">ValidationException</option></select></div>
+      <div>Blank 3 (method parameter type): <select id="ex-b3"><option value="">choose</option><option value="ok">MethodArgumentNotValidException</option><option value="w">BindingResult</option><option value="w">ConstraintViolationException</option><option value="w">Exception</option></select></div>
+    </div>
+    <button class="chk-btn" onclick="chkEx()">Check</button>
+    <div class="fb" id="ex-fb"></div>
+  </div>
+</div></div>
+
+<!-- 27: Mini challenge -->
+<div class="slide" id="s29"><div class="card">
+  <span class="stag stag-x">Mini Challenge</span>
+  <h1 class="st">Null vs blank — which fields actually fail validation?</h1>
+  <div class="grid2">
+    <div>
+      <h2 class="sh">The DTO:</h2>
+<div class="code" style="font-size:clamp(9px,1.5vw,11px)">public class ContactDTO {
+  @NotBlank(message="Name required")
+  private String name;
+
+  @NotNull(message="Email required")
+  private String email;
+
+  @Min(value=1,message="ID must be positive")
+  private Long id;
+}</div>
+    </div>
+    <div>
+      <h2 class="sh">The request body:</h2>
+<div class="code" style="font-size:clamp(9px,1.5vw,11px)">{
+  "name": "   ",
+  "id": 0
+}</div>
+      <p style="font-size:clamp(11px,1.6vw,12px);color:var(--muted);margin-bottom:8px">Note: "email" key is completely absent from the JSON.</p>
+      <div class="quiz-box" id="q-mini">
+        <p>Which fields produce a validation error?</p>
+        <div class="opts">
+          <button class="opt" onclick="ans(this,'mini',false)">A. Only id — spaces are valid, absent fields default to null which @NotNull allows</button>
+          <button class="opt" onclick="ans(this,'mini',false)">B. name and id — @NotNull on email passes because null is technically "not blank"</button>
+          <button class="opt" onclick="ans(this,'mini',true)">C. All three — @NotBlank rejects spaces-only, absent email is null which fails @NotNull, and id=0 fails @Min(1)</button>
+          <button class="opt" onclick="ans(this,'mini',false)">D. name and email — @Min(1) allows 0 because min is exclusive</button>
+        </div>
+        <div class="fb" id="fb-mini"></div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 28: Architecture -->
+<div class="slide" id="s30"><div class="card">
+  <span class="stag stag-z">Architecture</span>
+  <h1 class="st">How it all connects — the request flow</h1>
+  <p style="font-size:clamp(11px,1.7vw,12px);color:var(--hint);margin-bottom:10px">Incoming POST /contacts with request body</p>
+  <div class="arch-wrap">
+    <div class="arch-b">Client</div>
+    <div class="arch-arrow">&#8594;</div>
+    <div class="arch-b" style="border-color:rgba(94,203,138,.4);color:var(--green-t)">Controller<br><span style="font-size:10px;font-weight:400;color:var(--muted)">@Valid checks body</span></div>
+    <div class="arch-arrow">&#8594;</div>
+    <div class="arch-b" style="border-color:rgba(91,156,246,.4);color:var(--blue-t)">Service<br><span style="font-size:10px;font-weight:400;color:var(--muted)">business logic</span></div>
+    <div class="arch-arrow">&#8594;</div>
+    <div class="arch-b" style="border-color:rgba(61,191,168,.4);color:var(--teal-t)">Repository<br><span style="font-size:10px;font-weight:400;color:var(--muted)">DB access</span></div>
+  </div>
+  <div class="arch-asp">AOP Aspects run around every layer — logging, security, transactions</div>
+  <div class="arch-err" style="margin-top:6px">@RestControllerAdvice catches all exceptions &rarr; clean JSON error response</div>
+  <ul class="bl" style="margin-top:14px">
+    <li>Validation <b>stops bad data</b> at the controller boundary</li>
+    <li>AOP <b>handles cross-cutting</b> logic without touching business code</li>
+    <li>@RestControllerAdvice <b>ensures consistent</b> error responses everywhere</li>
+  </ul>
+</div></div>
+
+<!-- 29: Mini project -->
+<div class="slide" id="s31"><div class="card">
+  <span class="stag stag-x">Mini Project</span>
+  <h1 class="st">Contact API — put it all together</h1>
+  <div class="grid2">
+    <div>
+      <h2 class="sh">Build a Contact REST API with:</h2>
+      <ul class="bl">
+        <li><b>ContactDTO</b> — @NotBlank name, @Email, @Min(1) age</li>
+        <li><b>ContactController</b> — POST with @Valid, GET /{id} with @Validated + @Min(1)</li>
+        <li><b>LoggingAspect</b> — @Around all service methods</li>
+        <li><b>GlobalExceptionHandler</b> — both exception types</li>
+      </ul>
+    </div>
+    <div>
+      <h2 class="sh">Test with these requests:</h2>
+<div class="code" style="font-size:clamp(9px,1.5vw,11px)"><span class="hg">// Should return 201 Created</span>
+POST /contacts
+{"name":"Alice","email":"a@b.com","age":25}
+
+<span class="hr">// Should return 400 with field errors</span>
+POST /contacts
+{"name":"","email":"not-email","age":-1}
+
+<span class="hr">// Should return 400 constraint error</span>
+GET /contacts/-5</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 30: Summary -->
+<div class="slide" id="s32"><div class="card">
+  <span class="stag stag-z">Summary</span>
+  <h1 class="st">Three tools for clean Spring Boot APIs</h1>
+  <div style="display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:16px">
+    <div class="gcol" style="border-left:3px solid var(--blue)">
+      <h3 class="sc" style="color:var(--blue-t)">AOP &rarr; controls system behavior</h3>
+      <ul class="gcol-ul" style="display:flex;flex-direction:column;gap:4px">
+        <li>@Aspect + @Around for logging, timing, security</li>
+        <li>@Transactional, @Cacheable, @Async are built-in AOP</li>
+        <li>Write once, apply everywhere — no business logic changes</li>
+      </ul>
+    </div>
+    <div class="gcol" style="border-left:3px solid var(--green)">
+      <h3 class="sc" style="color:var(--green-t)">Validation &rarr; input safety</h3>
+      <ul class="gcol-ul" style="display:flex;flex-direction:column;gap:4px">
+        <li>@Valid on @RequestBody &rarr; MethodArgumentNotValidException</li>
+        <li>@Validated on class + @Min/@NotBlank on params &rarr; ConstraintViolationException</li>
+        <li>Reject at the boundary, keep the service clean</li>
+      </ul>
+    </div>
+    <div class="gcol" style="border-left:3px solid var(--red)">
+      <h3 class="sc" style="color:var(--red-t)">Exception handling &rarr; output clarity</h3>
+      <ul class="gcol-ul" style="display:flex;flex-direction:column;gap:4px">
+        <li>@RestControllerAdvice catches exceptions globally</li>
+        <li>@ExceptionHandler maps exceptions to clean JSON responses</li>
+        <li>Consistent format across every endpoint</li>
+      </ul>
+    </div>
+  </div>
+  <div class="note g">AOP keeps behavior clean. Validation keeps data clean. Exception handling keeps responses clean.</div>
+</div></div>
+
+<!-- NAV -->
+<div class="navrow">
+  <button class="nbtn" onclick="prev()">&#8592; Previous</button>
+  <button class="nbtn pri" onclick="next()">Next &#8594;</button>
+</div>
+
+</div><!-- /shell -->
+
+<script>
+var cur=-1,tot=34;
+function show(n){
+  document.querySelectorAll('.slide').forEach(function(s){s.classList.remove('on');});
+  document.getElementById('s'+n).classList.add('on');
+  document.getElementById('ctr').textContent=(n+2)+' / '+tot;
+  document.getElementById('pb').style.width=((n+2)/tot*100)+'%';
+  updNav(n);
+  window.scrollTo(0,0);
+}
+function goto(n){cur=n;show(n);}
+function next(){if(cur<32){cur++;show(cur);}}
+function prev(){if(cur>-1){cur--;show(cur);}}
+function updNav(n){
+  var secs=[0,2,12,19,24,30];
+  var btns=document.querySelectorAll('.sec-btn');
+  var a=0;
+  for(var i=0;i<secs.length;i++){if(n>=secs[i])a=i;}
+  btns.forEach(function(b,i){b.classList.toggle('on',i===a);});
+}
+function ans(btn,qid,correct){
+  var quiz=document.getElementById('q-'+qid);
+  quiz.querySelectorAll('.opt').forEach(function(b){b.classList.remove('ok','no');b.disabled=true;});
+  btn.classList.add(correct?'ok':'no');
+  var fb=document.getElementById('fb-'+qid);
+  fb.className='fb show '+(correct?'ok':'no');
+  var msgs={
+    'aop1-ok':'Correct! pjp.proceed() returns the real method result — if you do not capture and return it, the caller silently receives null instead.',
+    'aop1-no':'Not quite. The method runs fine, but since proceed() result is discarded and null is returned, every caller of this service method gets null back.',
+    'validated-ok':'Exactly right. @Valid on a body throws MethodArgumentNotValidException; @Validated path/param constraints throw ConstraintViolationException. You need two separate @ExceptionHandler methods to cover both.',
+    'validated-no':'Think about which exception each mechanism throws. @Valid and @Validated trigger different exception types — one handler cannot catch both.',
+    'mini-ok':'Correct! @NotBlank rejects whitespace-only strings. A missing JSON key deserializes to null, which fails @NotNull. @Min(1) is inclusive — 0 fails it.',
+    'mini-no':'Review: @NotBlank treats spaces-only as blank. An absent JSON key becomes null in Java. @Min(n) means value must be >= n, so 0 fails @Min(1).'
+  };
+  var key=qid+(correct?'-ok':'-no');
+  fb.textContent=msgs[key]||( correct?'Correct! Well done.':'Not quite — re-read the slide carefully before moving on.');
+}
+function chkFix1(){
+  var checks=document.querySelectorAll('#fix1-checks input');
+  var sel=[];
+  checks.forEach(function(c){if(c.checked)sel.push(c.value);});
+  var required=['1','2','3','4'];
+  var hasAll=required.every(function(v){return sel.indexOf(v)>=0;});
+  var noBad=sel.indexOf('5')<0;
+  var ok=hasAll&&noBad&&sel.length===4;
+  var fb=document.getElementById('fb-fix1');
+  fb.className='fb show '+(ok?'ok':'no');
+  if(ok){
+    fb.textContent='Correct! All 4 real bugs found. @Component + @Aspect together is actually the right pattern — @Component is needed to register the bean in Spring context.';
+  } else if(sel.indexOf('5')>=0){
+    fb.textContent='Option 5 is the red herring — @Component IS needed alongside @Aspect. @Aspect marks the class as an aspect; @Component registers it as a Spring bean. Both are required.';
+  } else {
+    fb.textContent='Not quite. Look carefully: @Aspect missing, void return (must be Object), JoinPoint must be ProceedingJoinPoint, and the result of proceed() must be returned.';
+  }
+}
+function chkVal(){
+  var n=document.getElementById('val-name').value;
+  var e=document.getElementById('val-email').value;
+  var a=document.getElementById('val-age').value;
+  var p=document.getElementById('val-phone').value;
+  var ok=n==='ok'&&e==='ok'&&a==='ok'&&p==='ok';
+  var fb=document.getElementById('val-fb');
+  fb.className='fb show '+(ok?'ok':'no');
+  if(ok){
+    fb.textContent='All correct! Key distinctions: @NotBlank rejects spaces (unlike @NotEmpty or @NotNull). @Email alone allows null — always pair it with @NotBlank. @Size works on Strings not numbers. phone is optional so no @NotBlank, just @Pattern.';
+  } else {
+    var hints=[];
+    if(n!=='ok') hints.push('name: @NotNull allows blank spaces, @NotEmpty allows whitespace — only @NotBlank rejects all three');
+    if(e!=='ok') hints.push('email: @Email alone allows null values; @NotNull + @Email still allows empty string — @NotBlank + @Email is the correct combo');
+    if(a!=='ok') hints.push('age: @Size is for Strings/Collections, not numbers; @Range is not a standard Jakarta annotation; @Positive allows any positive int, not a bounded range');
+    if(p!=='ok') hints.push('phone: it is optional, so adding @NotBlank would break optional semantics — @Pattern alone is correct');
+    fb.textContent=hints.join(' | ');
+  }
+}
+function chkEx(){
+  var b1=document.getElementById('ex-b1').value;
+  var b2=document.getElementById('ex-b2').value;
+  var b3=document.getElementById('ex-b3').value;
+  var ok=b1==='ok'&&b2==='ok'&&b3==='ok';
+  var fb=document.getElementById('ex-fb');
+  fb.className='fb show '+(ok?'ok':'no');
+  if(ok){
+    fb.textContent='Perfect! Spring uses 400 Bad Request for validation failures (not 422, which is HTTP standard but Spring does not default to it). BindException is a parent class but MethodArgumentNotValidException is the specific type Spring throws for @Valid @RequestBody.';
+  } else {
+    var hints=[];
+    if(b1!=='ok') hints.push('Status: Spring\'s @Valid throws 400 Bad Request by default, not 422 — even though 422 is semantically more correct for validation errors');
+    if(b2!=='ok') hints.push('@ExceptionHandler type: ConstraintViolationException handles @Validated path params; BindException is the parent class but too broad; MethodArgumentNotValidException is the exact type for @Valid @RequestBody');
+    if(b3!=='ok') hints.push('Parameter type must match the @ExceptionHandler exactly — BindingResult is accessed through the exception object, not injected directly');
+    fb.textContent=hints.join(' | ');
+  }
+}
+document.addEventListener('keydown',function(e){
+  if(e.key==='ArrowRight'||e.key===' ')next();
+  if(e.key==='ArrowLeft')prev();
+});
+</script>
+</body>
+</html>
